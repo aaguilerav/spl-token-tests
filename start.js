@@ -11,7 +11,6 @@ const {
     getAccount,
     mintTo,
     getAssociatedTokenAddress,
-    createAssociatedTokenAccountInstruction
 } = require('@solana/spl-token');
 
 const {
@@ -30,17 +29,7 @@ const token_holder_privkey = require('./helpers/pk-token-holder.json');
 const mintauth_privkey = require('./helpers/pk-mint-authority.json');
 const freezeauth_privkey = require('./helpers/pk-freeze-authority.json');
 
-/**
- * 
- * @param {*} payer 
- * @param {*} associatedToken 
- * @param {*} owner 
- * @param {*} mint 
- * @param {*} instructionData 
- * @param {*} programId 
- * @param {*} associatedTokenProgramId 
- * @returns 
- */
+// Implementation taken from: node_modules/@solana/spl-token/src/instructions/associatedTokenAccount.ts:17
 const buildAssociatedTokenAccountInstruction = (
     payer,
     associatedToken,
@@ -66,17 +55,8 @@ const buildAssociatedTokenAccountInstruction = (
     });
 }
 
-/**
- * 
- * @param {*} payer 
- * @param {*} associatedToken 
- * @param {*} owner 
- * @param {*} mint 
- * @param {*} programId 
- * @param {*} associatedTokenProgramId 
- * @returns 
- */
-const createAssociatedTokenAccountInstructionForked = (
+// Implementation taken from: node_modules/@solana/spl-token/src/instructions/associatedTokenAccount.ts:67
+const createAssociatedTokenAccountInstruction = (
     payer,
     associatedToken,
     owner,
@@ -172,15 +152,16 @@ const main = async () => {
     // log();
 
     // STEP-4 Get/Create ATOKEN Account. (Manually doing what getOrCreateAssociatedTokenAccount would do)
+    // Implementation taken from: node_modules/@solana/spl-token/src/actions/getOrCreateAssociatedTokenAccount.ts:30 (getOrCreateAssociatedTokenAccount(...))
     try {
         const transaction = new Transaction().add(
-            createAssociatedTokenAccountInstructionForked(
+            createAssociatedTokenAccountInstruction(
                 payer.publicKey,
                 associatedToken,
                 token_holder.publicKey,
                 mint,
-                new PublicKey('AgUtAD21hh5zdPLH5DzT3b6ZzhXzxEsDNadExmkbnWC9'), // spl-token-program deployed
-                new PublicKey('F4FqftQs5rqS244XDFvSdFumFsTUT7zATN3EVHSmSdYn')  // AToken program deployed
+                new PublicKey('AgUtAD21hh5zdPLH5DzT3b6ZzhXzxEsDNadExmkbnWC9'), // spl-token-program deployed on pl-solana-testnet
+                new PublicKey('F4FqftQs5rqS244XDFvSdFumFsTUT7zATN3EVHSmSdYn')  // AToken program deployed on pl-solana-testnet
             )
         );
 
