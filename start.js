@@ -28,9 +28,11 @@ const payer_privkey = require('./helpers/pk-payer.json');
 const token_holder_privkey = require('./helpers/pk-token-holder.json');
 const mintauth_privkey = require('./helpers/pk-mint-authority.json');
 const freezeauth_privkey = require('./helpers/pk-freeze-authority.json');
+const TOKEN_PROGRAM = new PublicKey('TokeRNc22SySPXzDxhu4geGyqsXqv8MHutdMq3MAn7Q');
+const ATOKEN_PROGRAM = new PublicKey('ATokLqXRe9wAGn9cTACPHewKB5LkhTu8WvcbPivLVNBA');
 
 // Implementation taken from: node_modules/@solana/spl-token/src/instructions/associatedTokenAccount.ts:17
-const buildAssociatedTokenAccountInstruction = (
+const buildAssociatedTokenAccountInstructionForked = (
     payer,
     associatedToken,
     owner,
@@ -56,7 +58,7 @@ const buildAssociatedTokenAccountInstruction = (
 }
 
 // Implementation taken from: node_modules/@solana/spl-token/src/instructions/associatedTokenAccount.ts:67
-const createAssociatedTokenAccountInstruction = (
+const createAssociatedTokenAccountInstructionForked = (
     payer,
     associatedToken,
     owner,
@@ -64,7 +66,7 @@ const createAssociatedTokenAccountInstruction = (
     programId,
     associatedTokenProgramId
 ) => {
-    return buildAssociatedTokenAccountInstruction(
+    return buildAssociatedTokenAccountInstructionForked(
         payer,
         associatedToken,
         owner,
@@ -79,7 +81,11 @@ const createAssociatedTokenAccountInstruction = (
  * ENTRYPOINT
  */
 const main = async () => {
+
     const connection = getClusterConnection();
+    log(`Connecting to: ${connection.rpcEndpoint}`);
+
+    // STEP-0 Load keys
     const payer = Keypair.fromSecretKey(Uint8Array.from(payer_privkey));
     const token_holder = Keypair.fromSecretKey(Uint8Array.from(token_holder_privkey));
     const mintAuthority = Keypair.fromSecretKey(Uint8Array.from(mintauth_privkey));
@@ -101,17 +107,16 @@ const main = async () => {
             commitment: 'confirmed',
             maxRetries: 3
         }, 
-        new PublicKey('AgUtAD21hh5zdPLH5DzT3b6ZzhXzxEsDNadExmkbnWC9') // spl-token-program deployed
+        TOKEN_PROGRAM
     );
-
-    log(await connection.getAccountInfoAndContext(mint));
+    // log(await connection.getAccountInfoAndContext(mint));
 
     // STEP-2 Get MINT info
     let mintInfo = await getMint(
         connection,
         mint,
         'confirmed',
-        new PublicKey('AgUtAD21hh5zdPLH5DzT3b6ZzhXzxEsDNadExmkbnWC9') // spl-token-program deployed
+        TOKEN_PROGRAM
     );
     log();
     log(`spl_token_address address: ${mint}`);
@@ -123,48 +128,29 @@ const main = async () => {
     log(`mintInfo.isInitialized ${mintInfo.isInitialized}`);
     log();
 
-    // STEP-3 Get ATOKEN Account
-    let associatedToken = await getAssociatedTokenAddress(
+    // STEP-3 Get/Create ATOKEN Account. (Manually doing what getOrCreateAssociatedTokenAccount would do)
+    // Implementation taken from: node_modules/@solana/spl-token/src/actions/getOrCreateAssociatedTokenAccount.ts:30 (getOrCreateAssociatedTokenAccount(...))
+    const associatedToken = await getAssociatedTokenAddress(
         mint,
         token_holder.publicKey,
-        false,
-        new PublicKey('AgUtAD21hh5zdPLH5DzT3b6ZzhXzxEsDNadExmkbnWC9'), // spl-token-program deployed
-        new PublicKey('F4FqftQs5rqS244XDFvSdFumFsTUT7zATN3EVHSmSdYn')  // AToken program deployed
+        true,
+        TOKEN_PROGRAM,
+        ATOKEN_PROGRAM
     );
+
     log(`getAssociatedTokenAddress: ${associatedToken}`);
-    log(`getAccountInfo: ${await connection.getAccountInfo(associatedToken, 'confirmed')}`);
 
-    // STEP-4 Get/Create ATOKEN Account.
-    // log('getOrCreateAssociatedTokenAccount');
-    // let tokenAccount = await getOrCreateAssociatedTokenAccount(
-    //     connection,
-    //     payer,
-    //     mint,
-    //     payer.publicKey,
-    //     new PublicKey('AgUtAD21hh5zdPLH5DzT3b6ZzhXzxEsDNadExmkbnWC9'), // Token
-    //     new PublicKey('F4FqftQs5rqS244XDFvSdFumFsTUT7zATN3EVHSmSdYn')  // AToken
-    // );
-    // log();
-    // log(`tokenAccount.address ${tokenAccount.address.toBase58()}`);
-    // log(`tokenAccount.mint ${tokenAccount.mint.toBase58()}`);
-    // log(`tokenAccount.owner ${tokenAccount.owner.toBase58()}`);
-    // log(`tokenAccount.amount ${tokenAccount.amount}`);
-    // log();
-
-    // STEP-4 Get/Create ATOKEN Account. (Manually doing what getOrCreateAssociatedTokenAccount would do)
-    // Implementation taken from: node_modules/@solana/spl-token/src/actions/getOrCreateAssociatedTokenAccount.ts:30 (getOrCreateAssociatedTokenAccount(...))
     try {
         const transaction = new Transaction().add(
-            createAssociatedTokenAccountInstruction(
+            createAssociatedTokenAccountInstructionForked(
                 payer.publicKey,
                 associatedToken,
                 token_holder.publicKey,
                 mint,
-                new PublicKey('AgUtAD21hh5zdPLH5DzT3b6ZzhXzxEsDNadExmkbnWC9'), // spl-token-program deployed on pl-solana-testnet
-                new PublicKey('F4FqftQs5rqS244XDFvSdFumFsTUT7zATN3EVHSmSdYn')  // AToken program deployed on pl-solana-testnet
+                TOKEN_PROGRAM,
+                ATOKEN_PROGRAM
             )
         );
-
         await sendAndConfirmTransaction(
             connection,
             transaction,
@@ -176,8 +162,26 @@ const main = async () => {
     } catch (error) {
         log(`error: ${error}`);
     }
+    log(`getAccountInfo: ${await connection.getAccountInfo(associatedToken, 'confirmed')}`);
 
-    // STEP-5 Get Atoken Account info
+    // STEP-3 Get/Create ATOKEN Account.
+    // log('getOrCreateAssociatedTokenAccount');
+    // let tokenAccount = await getOrCreateAssociatedTokenAccount(
+    //     connection,
+    //     payer,
+    //     mint,
+    //     payer.publicKey,
+    //     TOKEN_PROGRAM,
+    //     ATOKEN_PROGRAM
+    // );
+    // log();
+    // log(`tokenAccount.address ${tokenAccount.address.toBase58()}`);
+    // log(`tokenAccount.mint ${tokenAccount.mint.toBase58()}`);
+    // log(`tokenAccount.owner ${tokenAccount.owner.toBase58()}`);
+    // log(`tokenAccount.amount ${tokenAccount.amount}`);
+    // log();
+
+    // STEP-4 Get Atoken Account info
     // log('tokenAccountInfo');
     // let tokenAccountInfo = await getAccount(
     //     connection,
@@ -190,7 +194,7 @@ const main = async () => {
     // log(`tokenAccountInfo.amount ${tokenAccountInfo.amount}`);
     // log();
 
-    // STEP-6 Mint tokens and grant them to tokenAccount.address
+    // STEP-5 Mint tokens and grant them to tokenAccount.address
     // await mintTo(
     //     connection,
     //     payer,
@@ -200,7 +204,7 @@ const main = async () => {
     //     100000000000 // because decimals for the mint are set to 9 
     // );
 
-    // STEP-7 Get Mint info and validate new supply of tokens
+    // STEP-6 Get Mint info and validate new supply of tokens
     // mintInfo = await getMint(
     //     connection,
     //     mint
@@ -214,7 +218,7 @@ const main = async () => {
     // log(`mintInfo.isInitialized ${mintInfo.isInitialized}`);
     // log();
 
-    // STEP-8 Get tokenAccount.address account info and validate new supply of tokens
+    // STEP-7 Get tokenAccount.address account info and validate new supply of tokens
     // tokenAccountInfo = await getAccount(
     //     connection,
     //     tokenAccount.address
