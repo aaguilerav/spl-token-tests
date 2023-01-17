@@ -28,8 +28,8 @@ const payer_privkey = require('./helpers/pk-payer.json');
 const token_holder_privkey = require('./helpers/pk-token-holder.json');
 const mintauth_privkey = require('./helpers/pk-mint-authority.json');
 const freezeauth_privkey = require('./helpers/pk-freeze-authority.json');
-const TOKEN_PROGRAM = new PublicKey('9qgWVnARZLqQkj4iHJqWw3fSzEmnU37FqKzuckpU2pvk');
-const ATOKEN_PROGRAM = new PublicKey('BAKPYb2dKnMPZeHLizEsLeoE8jPdej7tvGkZE38i9us7');
+const TOKEN_PROGRAM = new PublicKey('TokenRfZiRqUVXKudCmtATpN3fCPksF1sPbV5vJZxcG');
+const ATOKEN_PROGRAM = new PublicKey('AToknjumD5QTN4NKinA2nigT82vp6EvWt3wnUzs7gbsp');
 
 // Implementation taken from: node_modules/@solana/spl-token/src/instructions/associatedTokenAccount.ts:17
 const buildAssociatedTokenAccountInstructionForked = (
