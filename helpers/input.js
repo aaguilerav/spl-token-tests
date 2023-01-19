@@ -177,6 +177,7 @@ const loadSolanaDefaultConfig = () => {
  * @returns 
  */
 const getClusterConnection = (url = 'https://plbapi.testnet.powerledger.io') => {
+// const getClusterConnection = (url = 'https://plb-api.mainnet.powerledger.io') => {
     // let solanaConfig = loadSolanaDefaultConfig();
     // let endpoint = '';
     // if (solanaConfig == undefined) {
