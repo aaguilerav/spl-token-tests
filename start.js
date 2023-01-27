@@ -11,6 +11,7 @@ const {
     getAccount,
     mintTo,
     getAssociatedTokenAddress,
+    transfer
 } = require('@solana/spl-token');
 
 const {
@@ -29,13 +30,17 @@ const token_holder_privkey = require('./helpers/pk-token-holder.json');
 const mintauth_privkey = require('./helpers/pk-mint-authority.json');
 const freezeauth_privkey = require('./helpers/pk-freeze-authority.json');
 
-// TESTNET
-const TOKEN_PROGRAM = new PublicKey('TokenRfZiRqUVXKudCmtATpN3fCPksF1sPbV5vJZxcG');
-const ATOKEN_PROGRAM = new PublicKey('AToknjumD5QTN4NKinA2nigT82vp6EvWt3wnUzs7gbsp');
+// SOLANA-TESTNET
+// const TOKEN_PROGRAM = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+// const ATOKEN_PROGRAM = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
 
-// MAINNET
-// const TOKEN_PROGRAM = new PublicKey('Token1ZAxcjfmf3ANqs2HEiWXYWHUbkhGynugUn4Joo');
-// const ATOKEN_PROGRAM = new PublicKey('ATokenjsNccUwTeSVA7oCcpj9qHYBV1eA7WhSZRzEkB4');
+// PL-SOLANA-TESTNET
+// const TOKEN_PROGRAM = new PublicKey('TokenRfZiRqUVXKudCmtATpN3fCPksF1sPbV5vJZxcG');
+// const ATOKEN_PROGRAM = new PublicKey('AToknjumD5QTN4NKinA2nigT82vp6EvWt3wnUzs7gbsp');
+
+// PL-SOLANA-TESTNET && PL-SOLANA-MAINNET
+const TOKEN_PROGRAM = new PublicKey('Token1ZAxcjfmf3ANqs2HEiWXYWHUbkhGynugUn4Joo');
+const ATOKEN_PROGRAM = new PublicKey('ATokenjsNccUwTeSVA7oCcpj9qHYBV1eA7WhSZRzEkB4');
 
 // Implementation taken from: node_modules/@solana/spl-token/src/instructions/associatedTokenAccount.ts:17
 const buildAssociatedTokenAccountInstructionForked = (
@@ -57,7 +62,7 @@ const buildAssociatedTokenAccountInstructionForked = (
     ];
 
     return new TransactionInstruction({
-        keys,
+        keys,   
         programId: associatedTokenProgramId,
         data: instructionData,
     });
@@ -229,7 +234,7 @@ const main = async () => {
     log(`7) ----------------------------------------------------------------`);
 
     // STEP-5 Mint tokens and grant them to tokenAccount.address
-    await mintTo(
+    const mintToTxid = await mintTo(
         connection,
         payer,
         mint,
@@ -240,6 +245,7 @@ const main = async () => {
         {commitment: 'confirmed', maxRetries: 3},
         TOKEN_PROGRAM
     );
+    log(`mintoTxId: ${mintToTxid}`);
 
     log(`8) ----------------------------------------------------------------`);
     // STEP-6 Get Mint info and validate new supply of tokens
@@ -273,6 +279,48 @@ const main = async () => {
     log(`tokenAccountInfo.owner ${tokenAccountInfo.owner.toBase58()}`);
     log(`tokenAccountInfo.amount ${tokenAccountInfo.amount}`);
     log();
+
+
+    let tokenAccountDest = await getOrCreateAssociatedTokenAccount(
+        connection,
+        payer,
+        mint,
+        freezeAuthority.publicKey,
+        false,
+        'confirmed',
+        {maxRetries: 3},
+        TOKEN_PROGRAM,
+        ATOKEN_PROGRAM
+    );
+    log();
+    log(`tokenAccountDest.address ${tokenAccountDest.address.toBase58()}`);
+    log(tokenAccountDest.address);
+    log(`tokenAccountDest.mint ${tokenAccountDest.mint.toBase58()}`);
+    log(`tokenAccountDest.owner ${tokenAccountDest.owner.toBase58()}`);
+    log(`tokenAccountDest.amount ${tokenAccountDest.amount}`);
+    log();
+
+    const transferTxId = await transfer(
+        connection,
+        payer,
+        tokenAccount.address,
+        tokenAccountDest.address,
+        payer,
+        1,
+        [],
+        'confirmed',
+        TOKEN_PROGRAM
+    );
+
+    log(transferTxId);
+
+    let txInfo = await connection.getParsedTransaction(transferTxId);
+    log(txInfo);
+    log(txInfo.meta.preTokenBalances);
+    log(txInfo.meta.postTokenBalances);
+
+    // let txRawData = await connection.getTransaction(transferTxId);
+    // log(txRawData);
 }
 
 /**
