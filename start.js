@@ -40,7 +40,9 @@ const freezeauth_privkey = require('./helpers/pk-freeze-authority.json');
 
 // PL-SOLANA-TESTNET && PL-SOLANA-MAINNET
 const TOKEN_PROGRAM = new PublicKey('Token1ZAxcjfmf3ANqs2HEiWXYWHUbkhGynugUn4Joo');
-const ATOKEN_PROGRAM = new PublicKey('ATokenjsNccUwTeSVA7oCcpj9qHYBV1eA7WhSZRzEkB4');
+// const ATOKEN_PROGRAM = new PublicKey('ATokenjsNccUwTeSVA7oCcpj9qHYBV1eA7WhSZRzEkB4');
+// const ATOKEN_PROGRAM = new PublicKey('Dfb66grycUwk6bb7bdYbdD2rvcGD9PRzy69ZS89yC6iV');
+const ATOKEN_PROGRAM = new PublicKey('ATokenqZm7F6ZkbeSGZss84Vrk2nEXacBQGHscAsjq5c');
 
 // Implementation taken from: node_modules/@solana/spl-token/src/instructions/associatedTokenAccount.ts:17
 const buildAssociatedTokenAccountInstructionForked = (
@@ -77,6 +79,7 @@ const createAssociatedTokenAccountInstructionForked = (
     programId,
     associatedTokenProgramId
 ) => {
+    console.log(`${programId}, ${associatedTokenProgramId}`);
     return buildAssociatedTokenAccountInstructionForked(
         payer,
         associatedToken,
@@ -153,29 +156,29 @@ const main = async () => {
 
     // STEP-3 Get/Create ATOKEN Account.
     log(`3) ----------------------------------------------------------------`);
-    // try {
-    //     const transaction = new Transaction().add(
-    //         createAssociatedTokenAccountInstructionForked(
-    //             payer.publicKey,
-    //             associatedToken,
-    //             token_holder.publicKey,
-    //             mint,
-    //             TOKEN_PROGRAM,
-    //             ATOKEN_PROGRAM
-    //         )
-    //     );
-    //     const res = await sendAndConfirmTransaction(
-    //         connection,
-    //         transaction,
-    //         [payer],
-            // {
-            //     commitment: 'confirmed',
-            //     maxRetries: 3
-            // });
-    //     log(res);
-    // } catch (error) {
-    //     log(`error: ${error}`);
-    // }
+    try {
+        const transaction = new Transaction().add(
+            createAssociatedTokenAccountInstructionForked(
+                payer.publicKey,
+                associatedToken,
+                token_holder.publicKey,
+                mint,
+                TOKEN_PROGRAM,
+                ATOKEN_PROGRAM
+            )
+        );
+        const res = await sendAndConfirmTransaction(
+            connection,
+            transaction,
+            [payer],
+            {
+                commitment: 'confirmed',
+                maxRetries: 3
+            });
+        log(res);
+    } catch (error) {
+        log(`error: ${error}`);
+    }
 
     log(`4) ----------------------------------------------------------------`);
 
